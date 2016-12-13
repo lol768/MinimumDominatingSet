@@ -108,20 +108,52 @@ namespace MinimumDominatingSet
             DeleteRangeFromGraph(strangers);
 
             // Now, whilst the graph has > 1 node, retrieve a young parent and add it to the set.
-            // Delete the young parent and its children, and repeat.
+            // Delete the young parent and its children, and repeat. Includes extra handling
+            // for the parents of young parents (see inline explanation).
             while (nodesInGraph.Count > 1)
             {
                 var nextYp = nodesInGraph.FirstOrDefault(n => n.IsYoungParent); // should never be null
                 workingDominatingSet.Add(nextYp.VertexIndex);
+
                 // Now, we'll mark the parent (if there is one) of the YP that we just removed as covered
                 if (nextYp.Parent != null)
                 {
                     nextYp.Parent.IsCovered = true;
                 }
 
+                // Remove the young parent and its children from the graph
                 DeleteFromGraph(nextYp);
 
-                // Find all covered nodes which are also leaves and remove them
+                // ---------- // // ---------- // // ---------- // // ---------- // // ---------- // // ---------- //
+
+                // Find all covered nodes which are also leaves and remove them. Many thanks to John Haslegrave
+                // and David Purser for identifying and explaining this issue with the original algorithm.
+
+                // This handles the edge case where we have a graph like this:
+                /*
+                    [1]--[2]--[3]--[4]--[5]--[6]
+                */
+                // By inspection, an MDS is {2,5} which is of size two. Let's try and apply the algorithm
+                // *without* the marking system:
+                /*
+                    [1]--[2]--[3]--[4]--{5}--[6]        Identifies {5} as YP, adds to set and deletes
+                    [1]--[2]--{3}--[4]                  Identifies {3} as YP, adds to set and deletes
+                    {1}--[2]                            Identifies {1} as YP, adds to set and deletes
+
+                    Final "minimum" dominating set given is {1,3,5} which clearly isn't right!
+                */
+
+                // Let's try it again with the IsCovered marker system:
+
+                /*
+                    [1]--[2]--[3]--[4]--{5}--[6]        Identifies {5} as YP, adds to set and deletes
+                    [1]--[2]--[3]--<4>                  {4} is marked as covered and removed as it's a leaf
+                    [1]--{2}--[3]                       Identifies {2} as YP, adds to set and deletes
+                    <1>                                 {1} is marked as covered and removed as it's a leaf
+
+                    Final "minimum" dominating set given is {2,5}. Much better!
+                */
+
                 DeleteRangeFromGraph(nodesInGraph.Where(n => n.IsLeaf && n.IsCovered).ToList());
             }
 
