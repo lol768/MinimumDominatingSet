@@ -30,6 +30,9 @@ namespace MinimumDominatingSet.Tests
             ds.Length.ShouldBe(3);
         }
 
+        /// <summary>
+        /// This one broke the original algorithm.
+        /// </summary>
         [Test]
         public void TestCounterExample()
         {
