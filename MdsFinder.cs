@@ -34,6 +34,13 @@ namespace MinimumDominatingSet
         public bool IsStranger => Parent == null && IsLeaf;
 
         /// <summary>
+        /// Whether this node has now been covered, e.g. as a result of this
+        /// node being the parent of a young parent that was added to the
+        /// dominating set.
+        /// </summary>
+        public bool IsCovered { get; set; }
+
+        /// <summary>
         /// Constructor, instantiates a new node instance.
         /// </summary>
         /// <param name="vertexIndex">The zero-indexed number assigned to the node.</param>
@@ -106,7 +113,16 @@ namespace MinimumDominatingSet
             {
                 var nextYp = nodesInGraph.FirstOrDefault(n => n.IsYoungParent); // should never be null
                 workingDominatingSet.Add(nextYp.VertexIndex);
+                // Now, we'll mark the parent (if there is one) of the YP that we just removed as covered
+                if (nextYp.Parent != null)
+                {
+                    nextYp.Parent.IsCovered = true;
+                }
+
                 DeleteFromGraph(nextYp);
+
+                // Find all covered nodes which are also leaves and remove them
+                DeleteRangeFromGraph(nodesInGraph.Where(n => n.IsLeaf && n.IsCovered).ToList());
             }
 
             // Termination: Every tree with 2 or more vertices includes a young parent,
